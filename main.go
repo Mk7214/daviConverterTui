@@ -6,41 +6,42 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 func main() {
-	inPathFlag := flag.String("in", "", "input video path")
-	outPathFlag := flag.String("out", "", "output file path (optional)")
-	formatFlag := flag.String("format", "h264", "output format: h264|prores|dnxhd|wav")
-
-	flag.Parse()
-
-	// normalizing format to lowercase
-	format := strings.ToLower(*formatFlag)
-	// format validation
-	switch format {
-	case "h264", "prores", "dnxhd", "wav": // ok
-	default:
-		fmt.Println("invalid format:", format)
-		fmt.Println("valid formats: h264, prores, dnxhd, wav")
-		os.Exit(1)
-	}
-
-	if *inPathFlag == "" {
-		fmt.Println("please provide the input file")
-		os.Exit(1)
-	}
-
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
 		fmt.Println("ffmpeg not found in path, Intall it and try again")
 		os.Exit(1)
 	}
+	// flag.Parse()
+	final, err := RunTUI()
+	if err != nil {
+		fmt.Println("TUI error:", err)
+		os.Exit(1)
+	}
+	if final.canceled {
+		fmt.Println("Canceled by user; exiting.")
+		os.Exit(0)
+	}
+	// format, err := formatValidator(formatFlag)
+	// if err != nil {
+	// 	os.Exit(1)
+	// }
+	format := final.format
+	inputPath := final.value
 
-	inputPath := *inPathFlag
+	// inPathFlag := flag.String("in", "", "input video path")
+	outPathFlag := flag.String("out", "", "output file path (optional)")
+	// formatFlag := flag.String("format", "h264", "output format: h264|prores|dnxhd|wav")
+
+	if err := isInputEmpty(final.value); err != nil {
+		os.Exit(1)
+	}
+
+	// inputPath := *inPathFlag
 	var outputPath string
 	if *outPathFlag == "" {
-		outputPath = defaultOutputPath(*inPathFlag, format)
+		outputPath = defaultOutputPath(final.value, format)
 	} else {
 		outputPath = *outPathFlag
 	}
@@ -51,3 +52,18 @@ func main() {
 	}
 	fmt.Println("conversion finished successfully ")
 }
+
+// func main() {
+// 	final, err := RunTUI()
+// 	if err != nil {
+// 		fmt.Println("TUI error:", err)
+// 		os.Exit(1)
+// 	}
+// 	if final.canceled {
+// 		fmt.Println("Canceled by user; exiting.")
+// 		os.Exit(0)
+// 	}
+//
+// 	fmt.Println("Input path:", final.value)
+// 	fmt.Println("Selected format:", final.format)
+// }
